@@ -20,6 +20,7 @@ cell_empty = "O"
 cell_deck = "■"
 cell_wreck_deck = "X"
 cell_miss = "T"
+prefix = ""
 
 class Ship():
     def __init__(self, *coords):
@@ -59,7 +60,6 @@ class Field():
 
     def shoot(self, x, y):
         global user_turn
-        prefix = "-> " if user_turn else "-> [робот] "
         try:
             if self.result[x][y] == cell_empty:
                 self.result[x][y] = cell_miss
@@ -68,9 +68,9 @@ class Field():
                 history.append(f"{prefix}Снаряд попал мимо цели")
                 user_turn = not user_turn
             elif self.result[x][y] == cell_miss:
-                history.append("Повнимательней. На этой клетке уже точно пусто. Стреляй по кружочкам")
+                history.append(f"{prefix}Повнимательней. На этой клетке уже точно пусто. Стреляй по кружочкам")
             elif self.result[x][y] == cell_wreck_deck:
-                history.append("Здесь лишь обломки корабля. Стреляй по кружочкам")
+                history.append(f"{prefix}Здесь лишь обломки корабля. Стреляй по кружочкам")
             elif self.result[x][y] == cell_deck:
                 history.append(f"{prefix}Точное попадание!")
                 self.result[x][y] = cell_wreck_deck
@@ -84,7 +84,7 @@ class Field():
                     history.append(f"{prefix}{ship.length}-палубный корабль разбит")
                     self.checkWinner()
         except IndexError:
-            history.append(f"Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
+            history.append(f"{prefix}Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
     
     def checkWinner(self):
         global game_end
@@ -127,22 +127,25 @@ while not game_end:
     x = None
     y = None
     
+    # prefix = "-> " if user_turn else "-> [робот] "
     for line in history:
         print(line)
     if user_turn:
         print("\nТвой ход")
         x = input("Номер строки: ")
         y = input("Номер колонки: ")
-        if x and y:
+        try:
+            prefix = f"-> [{x}x{y}] "
             aiField.shoot(int(x), int(y))
-        else:
-            history.append(f"Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
+        except:
+            history.append(f"-> Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
     else:
         x = 0
         y = 0
         while not myField.result[x][y] == cell_empty and not myField.result[x][y] == cell_deck:
             x = randrange(1, field_size + 1)
             y = randrange(1, field_size + 1)
+        prefix = f"-> [{x}x{y} робот] "
         myField.shoot(int(x), int(y))
     
     clear()
@@ -150,6 +153,6 @@ while not game_end:
     if game_end:
         printFields()
         if user_turn:
-            print("\nВы одержали победу!")
+            print("\nВы одержали победу!\n")
         else:
-            print("\nК сожалению, победила бездушная машина... F")
+            print("\nК сожалению, победила бездушная машина... F\n")
