@@ -14,8 +14,12 @@ def clear():
 field_size = 6
 game_end = False
 user_turn = True
-is_error = False
+history = []
 
+cell_empty = "O"
+cell_deck = "■"
+cell_wreck_deck = "X"
+cell_miss = "T"
 
 class Ship():
     def __init__(self, *coords):
@@ -41,40 +45,46 @@ class Field():
     def __init__(self, show_ships, *ships):
         self.ships = ships
         self.result = []
-        self.empty_cell = "O"
-        self.deck_cell = "■"
-        self.wreck_deck_cell = "X"
-        self.miss_cell = "T"
         self.show_ships = show_ships
 
         for i in range(field_size + 1):
             if i == 0:
                 self.result.append([" "] + list(range(1, field_size + 1)))
             else:
-                self.result.append([i] + [self.empty_cell for j in range(field_size)])
+                self.result.append([i] + [cell_empty for j in range(field_size)])
 
         for ship in self.ships:
             for deck_coords in ship.decks["coords"]:
-                self.result[deck_coords[0]][deck_coords[1]] = self.deck_cell
+                self.result[deck_coords[0]][deck_coords[1]] = cell_deck
 
     def shoot(self, x, y):
         global user_turn
+        prefix = "-> " if user_turn else "-> [робот] "
         try:
-            if self.result[x][y] == self.empty_cell:
-                self.result[x][y] = self.miss_cell
+            if self.result[x][y] == cell_empty:
+                self.result[x][y] = cell_miss
+                if user_turn:
+                    history.clear()
+                history.append(f"{prefix}Снаряд попал мимо цели")
                 user_turn = not user_turn
-            elif self.result[x][y] == self.deck_cell:
-                self.result[x][y] = self.wreck_deck_cell
+            elif self.result[x][y] == cell_miss:
+                history.append("Повнимательней. На этой клетке уже точно пусто. Стреляй по кружочкам")
+            elif self.result[x][y] == cell_wreck_deck:
+                history.append("Здесь лишь обломки корабля. Стреляй по кружочкам")
+            elif self.result[x][y] == cell_deck:
+                history.append(f"{prefix}Точное попадание!")
+                self.result[x][y] = cell_wreck_deck
                 coords = [x, y]
                 ship = [sh for sh in self.ships if coords in sh.decks["coords"]][0]
                 si = ship.decks["coords"].index(coords)
                 ship.decks["is_wrecked"][si] = True
                 if all(ship.decks["is_wrecked"]):
                     for w_coords in ship.water_coords:
-                        self.result[w_coords[0]][w_coords[1]] = self.miss_cell
+                        self.result[w_coords[0]][w_coords[1]] = cell_miss
+                    history.append(f"{prefix}{ship.length}-палубный корабль разбит")
                     self.checkWinner()
         except IndexError:
-            print(f"Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
+            history.append(f"Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
     
     def checkWinner(self):
         global game_end
@@ -86,7 +96,7 @@ class Field():
         if self.show_ships:
             output = self.result
         else:
-            output = map(lambda row: [self.empty_cell if i == self.deck_cell else i for i in row.copy()], self.result)
+            output = map(lambda row: [cell_empty if i == cell_deck else i for i in row.copy()], self.result)
             
         for row in output:
             print("|".join(map(str, row)) + "|")
@@ -108,6 +118,7 @@ def printFields():
     myField.printField()
     print("\nГавань роботов")
     aiField.printField()
+    print("")
 
 
 while not game_end:
@@ -115,14 +126,23 @@ while not game_end:
 
     x = None
     y = None
+    
+    for line in history:
+        print(line)
     if user_turn:
         print("\nТвой ход")
         x = input("Номер строки: ")
         y = input("Номер колонки: ")
-        aiField.shoot(int(x), int(y))
+        if x and y:
+            aiField.shoot(int(x), int(y))
+        else:
+            history.append(f"Уфф, ошибка координат. Лучше вводить числа от 1 до {field_size}")
     else:
-        x = randrange(1, field_size + 1)
-        y = randrange(1, field_size + 1)
+        x = 0
+        y = 0
+        while not myField.result[x][y] == cell_empty and not myField.result[x][y] == cell_deck:
+            x = randrange(1, field_size + 1)
+            y = randrange(1, field_size + 1)
         myField.shoot(int(x), int(y))
     
     clear()
@@ -130,6 +150,6 @@ while not game_end:
     if game_end:
         printFields()
         if user_turn:
-            print("\nВы одержали победу!\n")
+            print("\nВы одержали победу!")
         else:
-            print("\nК сожалению, победила бездушная машина... F\n")
+            print("\nК сожалению, победила бездушная машина... F")
